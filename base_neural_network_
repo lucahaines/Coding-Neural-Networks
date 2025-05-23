@@ -1,0 +1,30 @@
+# Coding neural network from scratch
+# This network will serve as the basis for future improvements and projects
+
+import numpy as np
+
+def relu(z):
+    return max(0, z)
+
+def relu_prime(z):
+    if z < 0:
+        return 0
+    else:
+        return 1
+
+class network(object):
+    def __init__(self, sizes):
+    """This is the network. We define layers to be the number of layers
+        in the neural network. We define sizes to be the number of neurons in
+        each layer. We define biases to be the vectors that define the biases
+        in each layer, note that we go from the first hidden layer to the 
+        output layer as the input layer does not have any biases. We define
+        weights to be the matrices between each layer that have shape k by j
+        where k is the number of neurons in layer l-1 and j is the number of
+        neurons in layer l
+        """
+        self.sizes = sizes
+        self.layers = len(sizes)
+        self.biases = [np.random.randn(y, 1) for y in sizes(1:)]
+        self.weights = [np.random.randn(k, j) for j,k in 
+                        zip(sizes[:-1], sizes[1:])]
