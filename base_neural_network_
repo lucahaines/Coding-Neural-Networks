@@ -1,30 +1,107 @@
-# Coding neural network from scratch
-# This network will serve as the basis for future improvements and projects
+# Coding neural network from scratch to solve MNIST data set. 
+# This code needs to be run on Kaggle
 
+# import modules
 import numpy as np
+import pandas as pd
+from matplotlib import pyplot as plt
 
-def relu(z):
-    return max(0, z)
+# load and organize data into training and testing sets
+data = pd.read_csv('/kaggle/input/digit-recognizer/train.csv')
+test_data = pd.read_csv('/kaggle/input/digit-recognizer/test.csv')
+data = np.array(data)
+m,n = data.shape
 
-def relu_prime(z):
-    if z < 0:
-        return 0
-    else:
-        return 1
+# training data
+training_data = data[1000:m].T
+y_training = training_data[0]
+a0_training = training_data[1:n] / 255
 
-class network(object):
-    def __init__(self, sizes):
-    """This is the network. We define layers to be the number of layers
-        in the neural network. We define sizes to be the number of neurons in
-        each layer. We define biases to be the vectors that define the biases
-        in each layer, note that we go from the first hidden layer to the 
-        output layer as the input layer does not have any biases. We define
-        weights to be the matrices between each layer that have shape k by j
-        where k is the number of neurons in layer l-1 and j is the number of
-        neurons in layer l
-        """
-        self.sizes = sizes
-        self.layers = len(sizes)
-        self.biases = [np.random.randn(y, 1) for y in sizes(1:)]
-        self.weights = [np.random.randn(k, j) for j,k in 
-                        zip(sizes[:-1], sizes[1:])]
+# test data
+test_data = data[:1000].T
+y_test = test_data[0]
+a0_test = test_data[1:n] / 255
+
+# initialize parameters
+def initialize():
+    w1 = np.random.randn(10, 784) * np.sqrt(2.0/784)
+    w2 = np.random.randn(10, 10) * np.sqrt(2.0/10)
+    b1 = np.zeros((10, 1))
+    b2 = np.zeros((10, 1))
+    return w1, w2, b1, b2
+
+# define sigmoid function
+def sigmoid(z):
+    return 1 / (1 + np.exp(-z))
+
+def sigmoid_prime(z):
+    s = 1 / (1 + np.exp(-z))
+    return s * (1 - s)
+
+# change y-labels to 10 x 1 vectors whose yth column is 1
+def change(y):
+    vector = np.zeros((y.size, y.max() + 1))
+    vector[np.arange(y.size), y] = 1
+    vector = vector.T
+    return vector
+
+# forward propagation
+def forwardprop(w1, w2, b1, b2, x):
+    z1 = np.dot(w1, x) + b1
+    a1 = sigmoid(z1)
+    z2 = np.dot(w2, a1) + b2
+    a2 = sigmoid(z2)
+    return z1, a1, z2, a2
+
+# backward propagation
+
+def backprop(z1, a1, z2, a2, w1, w2, b1, b2, x, y):
+
+    m = x.shape[1]
+    
+    y = change(y)
+    delta2 = a2 - y # BP1 from Nielson using MSE cost function
+    delta1 = (np.dot(w2.T, delta2)) * sigmoid_prime(z1) # BP2 from Nielson
+    
+
+    # Final equations BP3 and BP4 from Nielson
+    del_w1 = np.dot(delta1, x.T) / m
+    del_b1 = np.sum(delta1) / m
+    del_w2 = np.dot(delta2, a1.T) / m
+    del_b2 = np.sum(delta2) / m
+    
+    return del_w1, del_b1, del_w2, del_b2
+
+def update_params(w1, w2, b1, b2, del_w1, del_b1, del_w2, del_b2, eta):
+    w1 -= eta * del_w1
+    w2 -= eta * del_w2
+    b1 -= eta * del_b1
+    b2 -= eta * del_b2
+    return w1, w2, b1, b2
+
+# final gradient descent function
+def grad_descent(x, y, its, eta):
+    w1, w2, b1, b2 = initialize()
+    for i in range(its):
+        z1, a1, z2, a2 = forwardprop(w1, w2, b1, b2, x)
+        del_w1, del_b1, del_w2, del_b2 = backprop(z1, a1, z2, a2, w1, w2, b1, b2, x, y)
+        w1, w2, b1, b2 = update_params(w1, w2, b1, b2, del_w1, del_b1, del_w2, del_b2, eta)
+        if i % 50 == 0:
+            print('iteration', i)
+            print('accuracy on training is', test_accuracy(a2, y) * 100, '%')
+    return w1, w2, b1, b2
+
+def test_accuracy(a2, Y):
+    predictions = np.argmax(a2, 0)
+    return np.sum(predictions == Y) / Y.size
+
+def test_testing(x_training, y_training, its, eta, x_test, y_test):
+    w1, w2, b1, b2 = grad_descent(x_training, y_training, its, eta)
+    predictions = forwardprop(w1, w2, b1, b2, x_test)[3]
+    accuracy_on_test = test_accuracy(predictions, y_test)
+    print('accuracy on test data is', accuracy_on_test * 100, '%')
+
+# example usage:
+# grad_descent(a0_training, y_training, 1000, .2)
+# test_testing(a0_training, y_training, 1000, .2, a0_test, y_test)
+
